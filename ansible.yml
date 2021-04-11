@@ -1,0 +1,12 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: Copy ansible script
+      copy: src=ansible-deploy.sh dest=/root mode=0777
+   
+    - name: Copy the docker-compose file
+      copy: src=docker-compose.yml dest=/root 
+
+    - name: Execute the script
+      command: sh /root/ansible-deploy.sh

@@ -1,10 +1,105 @@
 pipeline {
-    agent any
-    stages {
-        stage('build') {
-            steps {
-                sh 'mvn --version'
-            }
+  environment {
+    imagename1 = "jijendran/discovery-service"
+    imagename2 = "jijendran/gateway-service"
+    imagename3 = "jijendran/zipkin-service"
+    imagename4 = "jijendran/account-service"
+    imagename5 = "jijendran/customer-service"
+    registryCredential = 'dockerhub'
+    //NEXUS_VERSION = "nexus3"
+    //NEXUS_PROTOCOL = "http"
+    //NEXUS_URL = "35.188.158.4:8083"
+    //NEXUS_REPOSITORY = "docker-private-registry"
+    //NEXUS_CREDENTIAL_ID = "nexus-user-cred"
+    //dockerImage = ''
+  }
+  agent any
+  stages {
+    stage('Cloning Git') {
+      steps {
+        git([url: 'https://github.com/JijendranP/sample-spring-microservices.git', branch: 'master'])
+
+      }
+    }
+    
+    stage('Code Compile') {
+      steps {
+        script {
+          def mavenHome =  tool name: 'maven-3.6.1', type: "maven"
+          def mavenCMD = "${mavenHome}/bin/mvn"
+          sh "${mavenCMD} clean package"
+          }
+        }   
+      }
+    
+    stage('Building image') {
+      steps{
+        script {
+          dockerImage1 = docker.build("$imagename1", "./discovery-service/")
+          dockerImage2 = docker.build("$imagename2", "./gateway-service/")
+          dockerImage3 = docker.build("$imagename3", "./zipkin-service/")
+          dockerImage4 = docker.build("$imagename4", "./account-service/")
+          dockerImage5 = docker.build("$imagename5", "./customer-service/")
+        }
+      }
+    }
+    
+    stage("Tag image with Nexus registry") {
+      steps {
+        script {
+          sh 'docker login -u admin -p admin123 $NEXUS_URL'
+          sh 'docker tag jijendran/discovery-service $NEXUS_URL/discovery-service'
+          sh 'docker tag jijendran/gateway-service $NEXUS_URL/gateway-service'
+          sh 'docker tag jijendran/zipkin-service $NEXUS_URL/zipkin-service'
+          sh 'docker tag jijendran/account-service $NEXUS_URL/account-service'
+          sh 'docker tag jijendran/customer-service $NEXUS_URL/customer-service'
+        }
+      }
+    }
+    
+    stage('Publish to Docker Registry') {
+      steps{
+        script {
+          //sh "echo 'Image pushed to Registry'"
+          withDockerRegistry(credentialsId: 'docker', url: 'https://index.docker.io/v1/') {
+            dockerImage1.push('latest')
+            dockerImage2.push('latest')
+            dockerImage3.push('latest')
+            dockerImage4.push('latest')
+            dockerImage5.push('latest')
+          }
+        }
+        
+      }
+    }
+    
+    stage("Publish to Nexus Registry") {
+      steps {
+        script {  
+          sh 'docker push $NEXUS_URL/discovery-service'
+          sh 'docker push $NEXUS_URL/gateway-service'
+          sh 'docker push $NEXUS_URL/zipkin-service'
+          sh 'docker push $NEXUS_URL/account-service'
+          sh 'docker push $NEXUS_URL/customer-service'
+        }
+      }
+    }
+    
+    stage('Ansible Init') {
+      steps {
+        script {
+          def tfHome = tool name: 'ansible'
+          env.PATH = "${tfHome}:${env.PATH}"
+          sh 'ansible --version'
+          }
         }
     }
-}
+        
+    stage('Ansible Deploy on Remote Server') {
+      steps {
+        ansiblePlaybook credentialsId: 'ansible', installation: 'ansible', inventory: '/etc/ansible/hosts', playbook: 'ansible.yml'
+      }
+    }
+    
+  }    
+}  

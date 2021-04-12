@@ -21,5 +21,5 @@
 docker-compose pull && docker-compose up -d
 
 ##To deprecate containers
-#docker_down=docker-compose down && docker rmi $(docker images -a -q)
+#docker-compose down && docker rmi $(docker images -a -q)
 

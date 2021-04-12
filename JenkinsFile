@@ -8,7 +8,7 @@ pipeline {
     registryCredential = 'dockerhub'
     //NEXUS_VERSION = "nexus3"
     //NEXUS_PROTOCOL = "http"
-    //NEXUS_URL = "35.188.158.4:8083"
+    //NEXUS_URL = "ip:8083" //8083 is port for docker in nexus
     //NEXUS_REPOSITORY = "docker-private-registry"
     //NEXUS_CREDENTIAL_ID = "nexus-user-cred"
     //dockerImage = ''
